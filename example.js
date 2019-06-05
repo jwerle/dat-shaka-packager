@@ -5,13 +5,14 @@ const packager = require('./')
 const storage = require('dat-storage')
 const rimraf = require('rimraf')
 
-const server = packager.createServer({
+const node = packager({
   discovery: {
-    key: '66dea7bef181330e5454c6a4cb7b848d838631ebb9e1bcd73b1bafb78bf51ae2'
+    key: '3546e77a133f01721058fb96cd9034d2cbf1e665eb040455e6eec614a8206bb7',
+    secretKey: 'a35a819166448913b81a0ab862573f4179ebb8d4bc2e871a600d80281355d7453546e77a133f01721058fb96cd9034d2cbf1e665eb040455e6eec614a8206bb7'
   }
 })
 
-server.listen(3000, onlistening)
+node.listen(3000, onlistening)
 
 function onlistening(err) {
   if (err) {
@@ -19,5 +20,5 @@ function onlistening(err) {
     process.exit(1)
   }
 
-  console.log('Listening on', server.address())
+  console.log('Listening on', node.address())
 }
