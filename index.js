@@ -1,4 +1,3 @@
-//const hyperdiscovery = require('hyperdiscovery')
 const datSwarmDefaults = require('dat-swarm-defaults')
 const hypersource = require('hypersource')
 const hyperdrive = require('hyperdrive')
@@ -13,11 +12,13 @@ const rimraf = require('rimraf')
 const swarm = require('discovery-swarm')
 const Batch = require('batch')
 const debug = require('debug')('dat-shaka-packager')
+const isUrl = require('is-url')
 const path = require('path')
 const ram = require('random-access-memory')
 const fs = require('fs')
 const os = require('os')
 
+const DOWNLOAD_TIMEOUT = 5000
 const toHex = (b) => b && Buffer.from(b).toString('hex')
 
 const defaults = Object.create({
@@ -89,11 +90,31 @@ function createNode(opts) {
     source.replicate(req)
 
     process.nextTick(build, { input, output, source, destination }, (err) => {
+      destination.replicate(res)
+
       if (err) {
         return onerror(err)
       }
 
-      destination.replicate(res)
+      destination.content.on('upload', () => {
+        const { uploadedBlocks } = destination.content.stats.totals
+        const { length } = destination.content
+
+        if (uploadedBlocks >= length) {
+          destination.content.once('peer-remove', () => stream.finalize())
+          return setTimeout(() => stream.finalize(), 500)
+        }
+      })
+
+      destination.metadata.on('upload', () => {
+        const { uploadedBlocks } = destination.metadata.stats.totals
+        const { length } = destination.metadata
+
+        if (uploadedBlocks >= length) {
+          destination.metadata.once('peer-remove', () => stream.finalize())
+          return setTimeout(() => stream.finalize(), 500)
+        }
+      })
     })
 
     function onclose() {
@@ -106,11 +127,16 @@ function createNode(opts) {
     function onerror(err) {
       if (err) {
         debug(err)
+
+        destination.writeFile('error.json', JSON.stringify({
+          name: err.name,
+          code: err.code || null,
+          status: err.status || null,
+          message: err.message,
+        }))
+
         try {
-          destination.close()
-          source.close()
-          req.end()
-          res.end()
+          setTimeout(() => req.stream.finalize(), 500)
         } catch (err) {
           debug(err)
         }
@@ -151,11 +177,12 @@ function createNode(opts) {
       const bopts = { input, output, source, destination }
 
       process.nextTick(build, bopts, (err) => {
+        destination.replicate({ stream, live: true })
+
         if (err) {
           return onerror(err)
         }
 
-        destination.replicate({ stream, live: true })
         destination.content.on('upload', () => {
           const { uploadedBlocks } = destination.content.stats.totals
           const { length } = destination.content
@@ -185,11 +212,14 @@ function createNode(opts) {
       function onerror(err) {
         if (err) {
           debug(err)
-          try {
-            stream.finalize()
-          } catch (err) {
-            debug(err)
-          }
+          destination.writeFile('error.json', JSON.stringify({
+            name: err.name,
+            code: err.code || null,
+            status: err.status || null,
+            message: err.message,
+          }))
+
+          return setTimeout(() => stream.finalize(), 500)
         }
       }
     })
@@ -250,19 +280,34 @@ function createNode(opts) {
       for (const entry of streams) {
         const args = []
 
-        for (const k in entry) {
-          args.push(`${k}=${entry[k]}`)
-        }
-
-        if (entry.in) {
+        if (entry.in && !isUrl(entry.in)) {
+          const filename = entry.in
           downloads.push((done) => {
-            source.stat(entry.in, (err) => {
+            source.stat(filename, (err) => {
               if (err) {
-                return done(err)
+                debug(err)
+                // ignore as the entry input could be another source
+                // supported by the packager
+                return done(null)
               }
-              source.download(entry.in, done)
+
+              const timeout = setTimeout(done, DOWNLOAD_TIMEOUT)
+              source.download(filename, (err) => {
+                clearTimeout(timeout)
+                done(err)
+              })
             })
           })
+        }
+
+        for (const k in entry) {
+          if (k === 'in') {
+            if (!isUrl(entry[k])) {
+              const filename = path.join(input, path.resolve('/', entry[k]))
+              entry[k] = filename
+            }
+          }
+          args.push(`${k}=${entry[k]}`)
         }
 
         argv.push(args.join(','))
@@ -277,6 +322,10 @@ function createNode(opts) {
           'string' === typeof manifest.packager[k] ||
           'number' === typeof manifest.packager[k]
         ) {
+          if (/_output$/.test(k)) {
+            const basename = manifest.packager[k]
+            manifest.packager[k] = path.resolve(path.join(input, basename))
+          }
           argv.push(`--${k} ${manifest.packager[k]}`)
         }
       }
@@ -300,7 +349,7 @@ function createNode(opts) {
       }
 
       tasks.push((done) => downloads.end(done))
-      tasks.push((done) => exec(argv.join(' '), { cwd: input }, done))
+      tasks.push((done) => exec(argv.join(' '), { cwd: output }, done))
       tasks.push((done) => {
         const opts = {
           ignore(filename) {
@@ -319,10 +368,21 @@ function createNode(opts) {
           }
         }
 
-        const from = { name: input }
-        const to = { name: '/', fs: destination }
+        const mirrors = new Batch()
 
-        mirror(from, to, opts, done)
+        mirrors.push((next) => {
+          const from = { name: input }
+          const to = { name: '/', fs: destination }
+          mirror(from, to, opts, next)
+        })
+
+        mirrors.push((next) => {
+          const from = { name: output }
+          const to = { name: '/', fs: destination }
+          mirror(from, to, opts, next)
+        })
+
+        mirrors.end(done)
       })
 
       tasks.end(done)
