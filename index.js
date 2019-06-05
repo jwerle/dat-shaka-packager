@@ -101,8 +101,8 @@ function createNode(opts) {
         const { length } = destination.content
 
         if (uploadedBlocks >= length) {
-          destination.content.once('peer-remove', () => stream.finalize())
-          return setTimeout(() => stream.finalize(), 500)
+          destination.content.once('peer-remove', () => req.stream.finalize())
+          return setTimeout(() => req.stream.finalize(), 500)
         }
       })
 
@@ -111,8 +111,8 @@ function createNode(opts) {
         const { length } = destination.metadata
 
         if (uploadedBlocks >= length) {
-          destination.metadata.once('peer-remove', () => stream.finalize())
-          return setTimeout(() => stream.finalize(), 500)
+          destination.metadata.once('peer-remove', () => req.stream.finalize())
+          return setTimeout(() => req.stream.finalize(), 500)
         }
       })
     })
@@ -280,6 +280,8 @@ function createNode(opts) {
       for (const entry of streams) {
         const args = []
 
+        normalizeStreamEntry(entry)
+
         if (entry.in && !isUrl(entry.in)) {
           const filename = entry.in
           downloads.push((done) => {
@@ -348,10 +350,12 @@ function createNode(opts) {
         argv.push(flat.join(','))
       }
 
+      debug('argv', argv.join(' '))
       tasks.push((done) => downloads.end(done))
       tasks.push((done) => exec(argv.join(' '), { cwd: output }, done))
       tasks.push((done) => {
         const opts = {
+          ignored,
           ignore(filename) {
             let verdict = false
 
@@ -360,7 +364,7 @@ function createNode(opts) {
             }
 
             if (false === verdict) {
-              verdict = ignored.some((i) => RegExp(i).test(filename))
+              verdict = this.ignored.some((i) => RegExp(i).test(filename))
             }
 
             debug('ignore: verdict=%b (%s)', verdict, filename)
@@ -373,12 +377,16 @@ function createNode(opts) {
         mirrors.push((next) => {
           const from = { name: input }
           const to = { name: '/', fs: destination }
-          mirror(from, to, opts, next)
+          source.readdir('/', {recursive: true}, (err, list) => {
+            opts.ignored = opts.ignored.concat(list)
+            mirror(from, to, opts, next)
+          })
         })
 
         mirrors.push((next) => {
           const from = { name: output }
           const to = { name: '/', fs: destination }
+          opts.ignored = ignored
           mirror(from, to, opts, next)
         })
 
@@ -386,6 +394,26 @@ function createNode(opts) {
       })
 
       tasks.end(done)
+    }
+  }
+}
+
+function normalizeStreamEntry(entry) {
+  const alias = {
+    input: 'in',
+    output: 'out',
+    stream_selector: 'stream',
+    segment_template: 'segment',
+    bw: 'bandwidth',
+    lang: 'language',
+    output_format: 'format',
+    trick_play_factor: 'tpf',
+  }
+
+  for (const k in entry) {
+    if (k in alias) {
+      entry[alias[k]] = entry[k]
+      delete entry[k]
     }
   }
 }
