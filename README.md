@@ -25,6 +25,22 @@ handshake.
 
 See _[protocol](#protocol)_ for more details on how this works.
 
+### Hypersource Client
+
+The `dat-shaka-packager` builds on
+[hypersource](https://github.com/jwerle/hypersource) and therefore works
+well with the client command line tool
+[`hsurl`](https://github.com/jwerle/hypersource-client).
+
+If you know the endpoint that a node is running on you can send and
+receive DAT archives easily.
+
+```sh
+$ hsurl wss://some-dat-shaka-packager-service.com \
+  -i /path/to/dat/archive/input \
+  -o /path/to/dat/archive/output
+```
+
 ## Example
 
 ### Create A Node
