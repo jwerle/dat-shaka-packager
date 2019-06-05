@@ -20,37 +20,4 @@ function onlistening(err) {
   }
 
   console.log('Listening on', server.address())
-
-  return
-  const drive = hyperdrive(storage('./inputs'), {
-    latest: true
-  })
-
-  drive.ready(() => {
-    const key = drive.key.toString('hex')
-    const socket = new WebSocket(`ws://localhost:3000/${key}`)
-    const stream = replicate(drive, socket, (err) => {
-      if (err) {
-        console.error('ERR', err)
-        process.exit(1)
-      }
-    })
-
-    stream.on('handshake', () => {
-      rimraf.sync('./outputs')
-
-      const output = hyperdrive(storage('./outputs'), stream.remoteUserData, {
-        latest: true
-      })
-
-      output.replicate({ stream, live: true })
-      output.on('sync', () => {
-        output.close()
-        stream.finalize()
-        socket.destroy()
-        process.nextTick(process.exit, 0)
-        console.log('sync');
-      })
-    })
-  })
 }
