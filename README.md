@@ -401,10 +401,9 @@ for a complete list of all the properties that can appear in this object.
         "input": "original.mp4",
         "stream": "video",
         "output": "video.mp4",
-        "format": "MP4"
+        "format": "MP4",
         "drm_label": "audio"
-      },
-    ...
+      }
     ]
 ...
 ```
@@ -426,8 +425,7 @@ encryption key is uniquely identified by the hex string
         "label": "audio",
         "key_id": "a5308ea1375fb2f240d90fc29bad2c66",
         "key": "0884cf8e9445bf2d6e10e5b88a8661d3"
-      },
-    ...
+      }
     ]
 ...
 ```
