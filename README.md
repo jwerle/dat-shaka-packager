@@ -27,6 +27,8 @@ See _[protocol][#protocol]_ for more details on how this works.
 
 ## Example
 
+### Create A Node
+
 ```js
 const packager = require('dat-shaka-packager')
 const crypto = require('crypto')
@@ -43,11 +45,9 @@ const node = packager({
     tmp: '/path/to/packager/tmpdir',
   },
 })
-
-node.listen(3000)
 ```
 
-### Connecting To Peer
+### Connecting To A Node
 
 The example below connects to a peer with a known public key, gets a
 ephemeral response public key from the replication user data, and
@@ -257,6 +257,47 @@ manifest above the following output will be generated:
 ```
 
 ## API
+
+### `node = require('dat-shaka-packager')(opts)`
+
+Creates a new `dat-shaka-packager` node where `opts` can be:
+
+```js
+{
+  ignore: [], // An array of file name patterns to ignore in output
+  storage: {
+    cache: '/path/to/cache/dir', // Request archive cache directory
+    tmp: '/path/to/tmp/dir', // Response archive temporary directory
+  },
+  discovery: { // extends 'dat-swarm-defaults'
+    key: 'publicKey', // public key for DAT network so peers can discovery you
+  }
+}
+```
+
+If you do not specify `opts.discovery.key` then the service will not
+join the DAT network and is not discoverable through peer discovery.
+Clients must connect to you directly.
+
+#### `node.listen(port[, address[, callback]])`
+
+Starts a [hypersource](https://github.com/jwerle/hypersource) server
+listening on `port` at an optional `address` calling `callback` on error
+or success.
+
+#### `node.discovery`
+
+If `opts.discovery` is not `false`, then this will be an instance of
+[discovery-swarm](https://github.com/mafintosh/discovery-swarm).
+
+#### `node.key`
+
+A `Buffer` that points back to the `opts.discovery.key` given in the
+constructor.
+
+#### `node.discoveryKey`
+
+A `Buffer` of the computed discovery key for `node.key`
 
 ## Manifest
 
