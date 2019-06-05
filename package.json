@@ -1,6 +1,6 @@
 {
   "name": "dat-shaka-packager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shaka Packager over the DAT network",
   "main": "index.js",
   "scripts": {
