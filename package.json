@@ -1,0 +1,39 @@
+{
+  "name": "dat-shaka-packager",
+  "version": "0.0.1",
+  "description": "Shaka Packager over the DAT network",
+  "main": "index.js",
+  "scripts": {
+    "test": ":"
+  },
+  "keywords": [
+    "shaka",
+    "packager",
+    "dat",
+    "network"
+  ],
+  "author": "Joseph Werle <joseph.werle@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "batch": "^0.6.1",
+    "dat-storage": "^1.1.1",
+    "dat-swarm-defaults": "^1.0.2",
+    "debug": "^4.1.1",
+    "discovery-swarm": "^6.0.0",
+    "extend": "^3.0.2",
+    "hypercore-crypto": "^1.0.0",
+    "hyperdrive": "^9.14.5",
+    "hypersource": "^0.1.6",
+    "mirror-folder": "^3.0.0",
+    "random-access-memory": "^3.1.1",
+    "shaka-packager-static": "^2.3.2"
+  },
+  "devDependencies": {
+    "check-json-schema": "^1.1.0",
+    "hypercore-replicate": "^0.1.0",
+    "hyperdiscovery": "^9.0.2",
+    "rimraf": "^2.6.3",
+    "simple-websocket": "^7.2.0",
+    "tape": "^4.10.2"
+  }
+}
