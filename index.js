@@ -55,17 +55,23 @@ function createNode(opts) {
   rimraf(opts.storage.cache, (err) => err && debug(err))
   rimraf(opts.storage.tmp, (err) => err && debug(err))
 
-  if (opts.discovery && opts.discovery.key) {
-    const key = Buffer.from(opts.discovery.key, 'hex')
-    const discoveryKey = crypto.discoveryKey(key)
+  node.key = null
+  node.discovery = null
+  node.discoveryKey = null
 
+  if (opts.discovery) {
     extend(true, opts.discovery, { stream: onstream })
 
-    node.key = key
     node.discovery = swarm(opts.discovery)
-    node.discoveryKey = discoveryKey
 
-    node.discovery.join(discoveryKey)
+    if (opts.discovery.key) {
+      const key = Buffer.from(opts.discovery.key, 'hex')
+      const discoveryKey = crypto.discoveryKey(key)
+
+      node.key = key
+      node.discoveryKey = discoveryKey
+      node.discovery.join(discoveryKey)
+    }
   }
 
   return node
