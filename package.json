@@ -4,7 +4,8 @@
   "description": "Shaka Packager over the DAT network",
   "main": "index.js",
   "scripts": {
-    "test": ":"
+    "test": ":",
+    "start": "node server.js"
   },
   "keywords": [
     "shaka",
@@ -35,5 +36,13 @@
     "rimraf": "^2.6.3",
     "simple-websocket": "^7.2.0",
     "tape": "^4.10.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jwerle/dat-shaka-packager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jwerle/dat-shaka-packager/issues"
+  },
+  "homepage": "https://github.com/jwerle/dat-shaka-packager#readme"
 }
