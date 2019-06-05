@@ -23,7 +23,7 @@ exchanged as user data (`userData`) in the
 [hypercore-protocol](https://github.com/mafintosh/hypercore-protocol)
 handshake.
 
-See _[protocol][#protocol]_ for more details on how this works.
+See _[protocol](#protocol)_ for more details on how this works.
 
 ## Example
 
