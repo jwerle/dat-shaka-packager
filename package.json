@@ -23,6 +23,7 @@
     "discovery-swarm": "^6.0.0",
     "extend": "^3.0.2",
     "hypercore-crypto": "^1.0.0",
+    "hypercore-protocol": "^6.11.0",
     "hyperdrive": "^9.14.5",
     "hypersource": "^0.1.6",
     "mirror-folder": "^3.0.0",
@@ -30,12 +31,9 @@
     "shaka-packager-static": "^2.3.2"
   },
   "devDependencies": {
-    "check-json-schema": "^1.1.0",
     "hypercore-replicate": "^0.1.0",
-    "hyperdiscovery": "^9.0.2",
     "rimraf": "^2.6.3",
-    "simple-websocket": "^7.2.0",
-    "tape": "^4.10.2"
+    "simple-websocket": "^7.2.0"
   },
   "repository": {
     "type": "git",
