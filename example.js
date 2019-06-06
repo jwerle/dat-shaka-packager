@@ -12,7 +12,7 @@ const node = packager({
   }
 })
 
-node.listen(3000, onlistening)
+node.listen(parseInt(process.env.PORT || 3000), onlistening)
 
 function onlistening(err) {
   if (err) {
