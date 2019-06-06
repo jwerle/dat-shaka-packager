@@ -1,4 +1,5 @@
 const datSwarmDefaults = require('dat-swarm-defaults')
+const hyperdiscovery = require('hyperdiscovery')
 const hypersource = require('hypersource')
 const hyperdrive = require('hyperdrive')
 const { exec } = require('child_process')
@@ -43,6 +44,7 @@ module.exports = createNode
 function createNode(opts) {
   opts = extend(true, Object.create(defaults), opts)
 
+  const discovery = hyperdiscovery()
   const node = hypersource.createServer(onrequest)
 
   // ensure packager binary is executable
@@ -107,21 +109,16 @@ function createNode(opts) {
         const { length } = destination.content
 
         if (uploadedBlocks >= length) {
-          destination.content.once('peer-remove', () => req.stream.finalize())
-          return setTimeout(() => req.stream.finalize(), 500)
-        }
-      })
-
-      destination.metadata.on('upload', () => {
-        const { uploadedBlocks } = destination.metadata.stats.totals
-        const { length } = destination.metadata
-
-        if (uploadedBlocks >= length) {
-          destination.metadata.once('peer-remove', () => req.stream.finalize())
-          return setTimeout(() => req.stream.finalize(), 500)
+          destination.content.once('peer-remove', onremove)
+          return setTimeout(onremove, 500)
         }
       })
     })
+
+    function onremove() {
+      req.destroy()
+      req.stream.finalize()
+    }
 
     function onclose() {
       source.close()
@@ -194,21 +191,15 @@ function createNode(opts) {
           const { length } = destination.content
 
           if (uploadedBlocks >= length) {
-            destination.content.once('peer-remove', () => stream.finalize())
-            return setTimeout(() => stream.finalize(), 500)
-          }
-        })
-
-        destination.metadata.on('upload', () => {
-          const { uploadedBlocks } = destination.metadata.stats.totals
-          const { length } = destination.metadata
-
-          if (uploadedBlocks >= length) {
-            destination.metadata.once('peer-remove', () => stream.finalize())
-            return setTimeout(() => stream.finalize(), 500)
+            destination.content.once('peer-remove', onremove)
+            return setTimeout(onremove, 500)
           }
         })
       })
+
+      function onremove() {
+        stream.finalize()
+      }
 
       function onclose() {
         source.close(() => rimraf(input, onerror))
@@ -238,9 +229,22 @@ function createNode(opts) {
     let ignored = [ '.dat/', 'dat.json' ].concat(opts.ignore)
     let files = []
 
+    if (source.content) {
+      oncontent()
+    } else {
+      source.once('content', oncontent)
+    }
+
+    discovery.add(source)
     source.once('error', done)
     destination.once('error', done)
     source.readFile('manifest.json', onmanifest)
+
+    function oncontent() {
+      source.content.once('close', () => {
+        discovery.leave(source.discoveryKey)
+      })
+    }
 
     function onmanifest(err, buf) {
       if (err) {
@@ -250,6 +254,7 @@ function createNode(opts) {
       manifest = JSON.parse(buf)
 
       const { streams, keys } = manifest.packager
+      const downloading = []
       const downloads = new Batch()
       const tasks = new Batch()
       const argv = [ packager.path ]
@@ -300,7 +305,10 @@ function createNode(opts) {
               }
 
               const timeout = setTimeout(done, DOWNLOAD_TIMEOUT)
+              const i = downloading.push(filename)
+              debug('download():', filename)
               source.download(filename, (err) => {
+                downloading.splice(i, 1)
                 clearTimeout(timeout)
                 done(err)
               })
@@ -356,9 +364,16 @@ function createNode(opts) {
         argv.push(flat.join(','))
       }
 
-      debug('argv', argv.join(' '))
-      tasks.push((done) => downloads.end(done))
-      tasks.push((done) => exec(argv.join(' '), { cwd: output }, done))
+      tasks.push((done) => {
+        debug('download():', downloading)
+        downloads.end(done)
+      })
+
+      tasks.push((done) => {
+        debug('exec():', argv.join(' '))
+        exec(argv.join(' '), { cwd: output }, done)
+      })
+
       tasks.push((done) => {
         const opts = {
           ignored,
