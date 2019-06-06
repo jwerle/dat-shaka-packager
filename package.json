@@ -24,6 +24,7 @@
     "extend": "^3.0.2",
     "hypercore-crypto": "^1.0.0",
     "hypercore-protocol": "^6.11.0",
+    "hyperdiscovery": "^9.0.2",
     "hyperdrive": "^9.14.5",
     "hypersource": "^0.1.6",
     "is-url": "^1.2.4",
